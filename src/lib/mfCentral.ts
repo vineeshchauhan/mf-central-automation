@@ -15,8 +15,9 @@ export interface PortfolioData {
 
 export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioData> {
     // Launch browser (headless by default, can be toggled via env or arg)
+    // Launch browser (headless by default, can be toggled via env or arg)
     const browser = await chromium.launch({
-        headless: false, // Keeping false for now to see what happens during dev
+        headless: true, // Must be true for GitHub Actions / CI
     });
 
     const page = await browser.newPage();
