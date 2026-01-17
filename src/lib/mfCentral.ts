@@ -58,7 +58,7 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
         }
 
         // Now Click Sign In
-        await page.locator('#submit-id').click();
+        await page.locator('#submit-id').click({ force: true });
 
         // --- Step 2: Security Questions ---
         console.log('Waiting for security question page...');
