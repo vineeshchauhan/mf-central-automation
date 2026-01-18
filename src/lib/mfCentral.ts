@@ -57,12 +57,15 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
             console.log('CAPTCHA interaction skipped or failed (might not be present or different selector).', e);
         }
 
+        // Wait for CAPTCHA/overlays to settle
+        await page.waitForTimeout(3000);
+
         // Now Click Sign In
         await page.locator('#submit-id').click({ force: true });
 
         // --- Step 2: Security Questions ---
         console.log('Waiting for security question page...');
-        await page.waitForURL('**/signin-questionnaire', { timeout: 10000 });
+        await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
 
         let answerFound = false;
         for (const [question, answer] of Object.entries(creds.securityQuestions)) {
