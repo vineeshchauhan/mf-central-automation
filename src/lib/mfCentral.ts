@@ -1,4 +1,9 @@
-import { chromium, Page } from 'playwright';
+import { chromium } from 'playwright-extra';
+import stealthPlugin from 'puppeteer-extra-plugin-stealth';
+import { Page } from 'playwright';
+
+// Enable stealth plugin to evade bot detection
+chromium.use(stealthPlugin());
 
 export interface MFCredentials {
     pan: string;
@@ -14,10 +19,11 @@ export interface PortfolioData {
 }
 
 export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioData> {
-    // Launch browser (headless by default, can be toggled via env or arg)
-    // Launch browser (headless by default, can be toggled via env or arg)
+    // Launch browser with Stealth Mode
+    // args: try to make it look like a real browser
     const browser = await chromium.launch({
-        headless: true, // Must be true for GitHub Actions / CI
+        headless: true,
+        args: ['--disable-blink-features=AutomationControlled']
     });
 
     const page = await browser.newPage();
