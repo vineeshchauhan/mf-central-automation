@@ -248,7 +248,15 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
 
     } catch (error) {
         console.error('Scraping Logic Failed:', error);
-        await page.screenshot({ path: 'error-final.png' });
+        // Save screenshot to a path that is likely to be archived (e.g. workspace)
+        // In GitHub actions, we can't easily see it unless uploaded as artifact, 
+        // but it helps if running locally.
+        try {
+            await page.screenshot({ path: 'debug-error.png', fullPage: true });
+            console.log('Saved debug-error.png');
+        } catch (e) {
+            console.log('Failed to save screenshot');
+        }
         throw error;
     } finally {
         await browser.close();
