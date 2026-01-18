@@ -60,30 +60,25 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
         // Wait for CAPTCHA/overlays to settle
         await page.waitForTimeout(3000);
 
-        // Now Click Sign In with Retry
-        // Sometimes the first click is eaten by a re-render or overlay close
-        let retries = 3;
-        while (retries > 0) {
-            console.log(`Clicking Sign In (Attempts left: ${retries})...`);
-            await page.locator('#submit-id').click({ force: true });
+        // Now Click Sign In using JS Execution (Bypasses overlays/interception)
+        console.log('Attempting JS Click on Submit...');
+        await page.locator('#submit-id').evaluate((el) => (el as HTMLElement).click());
 
-            try {
-                // Wait short time to see if navigation starts
-                await page.waitForURL('**/signin-questionnaire', { timeout: 10000 });
-                console.log('Navigation successful!');
-                break; // Navigation happened
-            } catch (e) {
-                console.log('Navigation did not happen yet, checking if button is still there...');
-                // If we are still on the login page, retry click
-                if (await page.locator('#submit-id').isVisible()) {
-                    retries--;
-                    await page.waitForTimeout(2000);
-                } else {
-                    // Button gone, maybe loading? Check for survey again with longer wait
-                    console.log('Button gone, assuming navigation in progress...');
-                    await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
-                    break;
-                }
+        console.log('Click triggered, waiting for navigation...');
+        try {
+            await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
+            console.log('Navigation successful!');
+        } catch (e) {
+            console.log('Primary navigation wait failed. Checking if we are still stuck...');
+            const url = page.url();
+            /* 
+               If still on signin, it might be an invalid password or captcha issue not showing up in logs.
+               We check for error text.
+            */
+            if (url.includes('signin')) {
+                const errorMsg = await page.locator('.Mui-error').textContent().catch(() => null);
+                if (errorMsg) console.log(`Detected Error Message: ${errorMsg}`);
+                throw new Error('Stuck on Sign In page after JS Click.');
             }
         }
 
