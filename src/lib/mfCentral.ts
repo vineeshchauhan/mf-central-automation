@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-extra';
 import stealthPlugin from 'puppeteer-extra-plugin-stealth';
 import { Page } from 'playwright';
+import fs from 'fs';
 
 // Enable stealth plugin to evade bot detection
 chromium.use(stealthPlugin());
@@ -21,12 +22,24 @@ export interface PortfolioData {
 export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioData> {
     // Launch browser with Stealth Mode
     // args: try to make it look like a real browser
+    // Launch browser with Stealth Mode
+    // args: try to make it look like a real browser
     const browser = await chromium.launch({
         headless: true,
         args: ['--disable-blink-features=AutomationControlled']
     });
 
-    const page = await browser.newPage();
+    // Create context with saved session if it exists (for CI)
+    // In CI, we will write the secret variable content to 'session.json' before running
+    let context;
+    if (fs.existsSync('session.json')) {
+        console.log('Restoring saved session from session.json...');
+        context = await browser.newContext({ storageState: 'session.json' });
+    } else {
+        context = await browser.newContext();
+    }
+
+    const page = await context.newPage();
 
     try {
         console.log('Navigating to MF Central...');
