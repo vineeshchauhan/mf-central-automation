@@ -35,11 +35,14 @@ jobs:
         run: |
           echo $SERVICE_ACCOUNT_BASE64 | base64 -d > service-account.json
 
-      - name: Run Job
+      - name: Run Job (Headed with Xvfb)
         env:
           PAN: ${{ secrets.PAN }}
           PASSWORD: ${{ secrets.PASSWORD }}
           SECURITY_QUESTIONS_JSON: ${{ secrets.SECURITY_QUESTIONS_JSON }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          SHEET_NAME: ${{ secrets.SHEET_NAME }} # Optional, defaults to 'Mutual Funds' if not set
-        run: npx tsx scripts/run-job.ts
+          SHEET_NAME: ${{ secrets.SHEET_NAME }}
+          # Force Playwright to use headed mode (controlled via code update next)
+          CI: true 
+        # Using xvfb-run to simulate a specialized display server for the browser
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx tsx scripts/run-job.ts

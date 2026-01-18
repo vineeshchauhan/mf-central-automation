@@ -21,12 +21,15 @@ export interface PortfolioData {
 
 export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioData> {
     // Launch browser with Stealth Mode
-    // args: try to make it look like a real browser
-    // Launch browser with Stealth Mode
-    // args: try to make it look like a real browser
+    // We are running 'headed' now (headless: false) but inside Xvfb in CI.
+    // This is the most robust way to avoid "HeadlessChrome" detection.
     const browser = await chromium.launch({
-        headless: true,
-        args: ['--disable-blink-features=AutomationControlled']
+        headless: false,
+        args: [
+            '--disable-blink-features=AutomationControlled',
+            '--no-sandbox',
+            '--disable-setuid-sandbox'
+        ]
     });
 
     // Create context with saved session if it exists (for CI)
