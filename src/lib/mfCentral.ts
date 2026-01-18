@@ -60,12 +60,41 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
         // Wait for CAPTCHA/overlays to settle
         await page.waitForTimeout(3000);
 
-        // Now Click Sign In
-        await page.locator('#submit-id').click({ force: true });
+        // Now Click Sign In with Retry
+        // Sometimes the first click is eaten by a re-render or overlay close
+        let retries = 3;
+        while (retries > 0) {
+            console.log(`Clicking Sign In (Attempts left: ${retries})...`);
+            await page.locator('#submit-id').click({ force: true });
+
+            try {
+                // Wait short time to see if navigation starts
+                await page.waitForURL('**/signin-questionnaire', { timeout: 10000 });
+                console.log('Navigation successful!');
+                break; // Navigation happened
+            } catch (e) {
+                console.log('Navigation did not happen yet, checking if button is still there...');
+                // If we are still on the login page, retry click
+                if (await page.locator('#submit-id').isVisible()) {
+                    retries--;
+                    await page.waitForTimeout(2000);
+                } else {
+                    // Button gone, maybe loading? Check for survey again with longer wait
+                    console.log('Button gone, assuming navigation in progress...');
+                    await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
+                    break;
+                }
+            }
+        }
 
         // --- Step 2: Security Questions ---
         console.log('Waiting for security question page...');
-        await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
+        // Ensure we are there (redundant check but safe)
+        if (page.url().includes('signin-questionnaire')) {
+            console.log('Already on questionnaire page.');
+        } else {
+            await page.waitForURL('**/signin-questionnaire', { timeout: 30000 });
+        }
 
         let answerFound = false;
         for (const [question, answer] of Object.entries(creds.securityQuestions)) {
