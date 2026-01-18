@@ -26,6 +26,14 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
         console.log('Navigating to MF Central...');
         await page.goto('https://app.mfcentral.com/investor/signin');
 
+        console.log('Page loaded.');
+        console.log('Title:', await page.title());
+        console.log('URL:', page.url());
+
+        // Debug: Screenshot initial state
+        await page.screenshot({ path: 'debug-initial-load.png' });
+        console.log('Saved debug-initial-load.png');
+
         // --- Step 1: Login Credentials ---
         console.log('entering credentials...');
         // Type PAN
@@ -38,23 +46,35 @@ export async function scrapeMFCentral(creds: MFCredentials): Promise<PortfolioDa
         // But FIRST, handle reCAPTCHA if present
         console.log('Checking for reCAPTCHA...');
         try {
-            // Find the reCAPTCHA iframe
             const captchaFrame = page.frameLocator('iframe[title="reCAPTCHA"]');
-
-            // Click the anchor checkbox
-            // We use a short timeout because if it's not there, we don't want to wait forever.
-            // But user said it IS there.
             const anchor = captchaFrame.locator('#recaptcha-anchor');
+
             if (await anchor.isVisible()) {
-                console.log('Clicking "I\'m not a robot"...');
-                await anchor.click();
-                // Wait for the checkmark or state change. 
-                // Strategy: Wait a bit. If it triggers a picture challenge, this script might hang or fail.
-                // For a "useful saas product", we assume standard behavior (tick).
+                console.log('reCAPTCHA found. Investigating state...');
+
+                // Check if already checked
+                const isChecked = await anchor.getAttribute('aria-checked') === 'true';
+                if (!isChecked) {
+                    console.log('Clicking "I\'m not a robot"...');
+                    await anchor.click();
+
+                    // Wait for state change
+                    // 1. Either it becomes checked
+                    // 2. Or it opens a challenge window (which we can't easily handle in headless)
+                    try {
+                        await anchor.locator('[aria-checked="true"]').waitFor({ state: 'attached', timeout: 5000 });
+                        console.log('reCAPTCHA checked successfully!');
+                    } catch (e) {
+                        console.log('Warning: reCAPTCHA did not show "checked" state within 5s. Possible picture challenge??');
+                    }
+                } else {
+                    console.log('reCAPTCHA was already checked.');
+                }
+
                 await page.waitForTimeout(2000);
             }
         } catch (e) {
-            console.log('CAPTCHA interaction skipped or failed (might not be present or different selector).', e);
+            console.log('CAPTCHA interaction skipped or failed.', e);
         }
 
         // Wait for CAPTCHA/overlays to settle
